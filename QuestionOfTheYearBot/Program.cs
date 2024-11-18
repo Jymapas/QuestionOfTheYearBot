@@ -2,15 +2,22 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-var apiUrl = "https://gotquestions.online/api/question/395284/";
-var client = new HttpClient();
-var response = await client.GetAsync(apiUrl);
+const string packageApiBase = "https://gotquestions.online/api/pack/";
 
-if (response.IsSuccessStatusCode)
+var questionApiUrl = "https://gotquestions.online/api/question/395284/";
+var client = new HttpClient();
+var questionResponse = await client.GetAsync(questionApiUrl);
+
+if (questionResponse.IsSuccessStatusCode)
 {
-    var json = await response.Content.ReadAsStringAsync();
-    var question = JsonSerializer.Deserialize<Question>(json);
-    question.QuestionId = apiUrl.Split('/')[^2];
+    var questionJson = await questionResponse.Content.ReadAsStringAsync();
+    var question = JsonSerializer.Deserialize<Question>(questionJson);
+    question.QuestionId = questionApiUrl.Split('/')[^2];
+
+    var packageResponse = await client.GetAsync($@"{packageApiBase}{question.packageId}/");
+    var packageJson = await packageResponse.Content.ReadAsStringAsync();
+    var package = JsonSerializer.Deserialize<Tournament>(packageJson);
+    if (package is { Id: not null }) question.TournamentId = package.Id.Value;
 
     Console.WriteLine(question);
 }
@@ -22,6 +29,7 @@ else
 internal class Question
 {
     [JsonPropertyName("packTitle")] public string TournamentName { get; init; }
+    [JsonPropertyName("packId")] public int packageId { get; init; }
     public int TournamentId { get; set; }
     public string QuestionId { get; set; }
     [JsonPropertyName("number")] public int Number { get; init; }
@@ -40,11 +48,12 @@ internal class Question
         var sb = new StringBuilder();
 
         sb.Append($"Название турнира: {TournamentName}\n");
+        if (TournamentId != 0) sb.Append($"Ссылка на турнир: https://rating.chgk.info/tournament/{TournamentId}\n");
         sb.Append($"Ссылка на вопрос: https://gotquestions.online/question/{QuestionId}\n");
         sb.Append($"Вопрос {Number}\n");
         if (HandoutPic != null || HandoutText != null)
         {
-            sb.Append("[Раздаточный материал:\n");
+            sb.Append("[Раздаточный материал:");
             if (HandoutPic != null) sb.Append($"{HandoutPic}\n");
 
             if (HandoutText != null) sb.Append($"{HandoutText}\n");
@@ -54,10 +63,10 @@ internal class Question
         sb.Append($"{Text}\n");
         sb.Append($"Ответ: {Answer}\n");
         if (AdditionalAnswer != null) sb.Append($"Зачет: {AdditionalAnswer}\n");
-        if (WrongAnswer != null) sb.Append($"Незачет: {WrongAnswer}\n");
-        sb.Append($"Комментарий: {Comment}\n");
+        if (!string.IsNullOrEmpty(WrongAnswer)) sb.Append($"Незачет: {WrongAnswer}\n");
+        sb.Append($"Комментарий: {Comment}\n");
         sb.Append($"Источник: {Source}\n");
-        if (Authors.Capacity > 1)
+        if (Authors.Count > 1)
         {
             sb.Append($"Авторы: {string.Join(", ", Authors.Select(a => a.Name))}\n");
             return sb.ToString();
@@ -76,4 +85,9 @@ internal class Question
             return Name;
         }
     }
+}
+
+internal class Tournament
+{
+    [JsonPropertyName("syncronId")] public int? Id { get; init; }
 }

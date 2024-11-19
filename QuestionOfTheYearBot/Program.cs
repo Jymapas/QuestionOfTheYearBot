@@ -1,6 +1,10 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Configuration;
+using Telegram.Bot;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 const string packageApiBase = "https://gotquestions.online/api/pack/";
 
@@ -25,6 +29,27 @@ else
 {
     Console.WriteLine("Failed to receive data");
 }
+
+var configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", false, true)
+    .Build();
+
+var botToken = configuration["Authentication:Token"];
+
+if (string.IsNullOrEmpty(botToken)) throw new InvalidOperationException("Token is not configured.");
+
+using var cts = new CancellationTokenSource();
+var bot = new TelegramBotClient(botToken, cancellationToken: cts.Token);
+bot.OnMessage += OnMessage;
+
+async Task OnMessage(Message msg, UpdateType type)
+{
+    if (msg.Text is null) return;
+    Console.WriteLine($"Received {type} '{msg.Text}' in {msg.Chat}");
+    await bot.SendMessage(msg.Chat, $"{msg.From} said: {msg.Text}");
+}
+
+Console.ReadLine();
 
 internal class Question
 {

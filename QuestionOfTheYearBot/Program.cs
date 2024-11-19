@@ -8,26 +8,28 @@ using Telegram.Bot.Types.Enums;
 
 const string packageApiBase = "https://gotquestions.online/api/pack/";
 
-var questionApiUrl = "https://gotquestions.online/api/question/395284/";
-var client = new HttpClient();
-var questionResponse = await client.GetAsync(questionApiUrl);
-
-if (questionResponse.IsSuccessStatusCode)
+async Task<String> GetQuestionAsync(string questionApiUrl)
 {
-    var questionJson = await questionResponse.Content.ReadAsStringAsync();
-    var question = JsonSerializer.Deserialize<Question>(questionJson);
-    question.QuestionId = questionApiUrl.Split('/')[^2];
+    var client = new HttpClient();
+    var questionResponse = await client.GetAsync(questionApiUrl);
 
-    var packageResponse = await client.GetAsync($@"{packageApiBase}{question.packageId}/");
-    var packageJson = await packageResponse.Content.ReadAsStringAsync();
-    var package = JsonSerializer.Deserialize<Tournament>(packageJson);
-    if (package is { Id: not null }) question.TournamentId = package.Id.Value;
+    if (questionResponse.IsSuccessStatusCode)
+    {
+        var questionJson = await questionResponse.Content.ReadAsStringAsync();
+        var question = JsonSerializer.Deserialize<Question>(questionJson);
+        question.QuestionId = questionApiUrl.Split('/')[^2];
 
-    Console.WriteLine(question);
-}
-else
-{
-    Console.WriteLine("Failed to receive data");
+        var packageResponse = await client.GetAsync($@"{packageApiBase}{question.packageId}/");
+        var packageJson = await packageResponse.Content.ReadAsStringAsync();
+        var package = JsonSerializer.Deserialize<Tournament>(packageJson);
+        if (package is { Id: not null }) question.TournamentId = package.Id.Value;
+
+        return question.ToString();
+    }
+    else
+    {
+        return "Failed to receive data";
+    }
 }
 
 var configuration = new ConfigurationBuilder()

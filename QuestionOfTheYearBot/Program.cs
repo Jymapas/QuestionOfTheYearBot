@@ -1,35 +1,35 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
 const string packageApiBase = "https://gotquestions.online/api/pack/";
+const string questionApiBase = "https://gotquestions.online/api/question/";
+const string noLinkError = "В сообщении нет ссылки на вопрос.";
+const string noTextError = "Бот поддеживает только работу с текстом.";
 
-async Task<String> GetQuestionAsync(string questionApiUrl)
+async Task<string> GetQuestionAsync(int questionId)
 {
     var client = new HttpClient();
+    var questionApiUrl = $"{questionApiBase}{questionId}/";
     var questionResponse = await client.GetAsync(questionApiUrl);
 
-    if (questionResponse.IsSuccessStatusCode)
-    {
-        var questionJson = await questionResponse.Content.ReadAsStringAsync();
-        var question = JsonSerializer.Deserialize<Question>(questionJson);
-        question.QuestionId = questionApiUrl.Split('/')[^2];
+    if (!questionResponse.IsSuccessStatusCode) return "Failed to receive data";
 
-        var packageResponse = await client.GetAsync($@"{packageApiBase}{question.packageId}/");
-        var packageJson = await packageResponse.Content.ReadAsStringAsync();
-        var package = JsonSerializer.Deserialize<Tournament>(packageJson);
-        if (package is { Id: not null }) question.TournamentId = package.Id.Value;
+    var questionJson = await questionResponse.Content.ReadAsStringAsync();
+    var question = JsonSerializer.Deserialize<Question>(questionJson);
+    question.QuestionId = questionApiUrl.Split('/')[^2];
 
-        return question.ToString();
-    }
-    else
-    {
-        return "Failed to receive data";
-    }
+    var packageResponse = await client.GetAsync($@"{packageApiBase}{question.packageId}/");
+    var packageJson = await packageResponse.Content.ReadAsStringAsync();
+    var package = JsonSerializer.Deserialize<Tournament>(packageJson);
+    if (package is { Id: not null }) question.TournamentId = package.Id.Value;
+
+    return question.ToString();
 }
 
 var configuration = new ConfigurationBuilder()
@@ -44,14 +44,29 @@ using var cts = new CancellationTokenSource();
 var bot = new TelegramBotClient(botToken, cancellationToken: cts.Token);
 bot.OnMessage += OnMessage;
 
+Console.ReadLine();
+
 async Task OnMessage(Message msg, UpdateType type)
 {
-    if (msg.Text is null) return;
-    Console.WriteLine($"Received {type} '{msg.Text}' in {msg.Chat}");
-    await bot.SendMessage(msg.Chat, $"{msg.From} said: {msg.Text}");
+    if (msg.Text is null) await bot.SendMessage(msg.Chat, noTextError);
+
+    var (isMatch, questionId) = await TryGetQuestionIdAsync(msg.Text);
+    if (!isMatch) await bot.SendMessage(msg.Chat, noLinkError);
+
+    await bot.SendMessage(msg.Chat, await GetQuestionAsync(questionId.Value));
 }
 
-Console.ReadLine();
+static async Task<(bool isMatch, int? questionId)> TryGetQuestionIdAsync(string messageText)
+{
+    var pattern = @"https:\/\/gotquestions\.online\/question\/(\d+)";
+
+    var match = Regex.Match(messageText, pattern);
+    if (!match.Success) return (false, null);
+
+    var numberString = match.Groups[1].Value;
+    var number = int.Parse(numberString);
+    return (true, number);
+}
 
 internal class Question
 {

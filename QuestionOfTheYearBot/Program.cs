@@ -52,8 +52,9 @@ async Task OnMessage(Message msg, UpdateType type)
 
     var (isMatch, questionId) = await TryGetQuestionIdAsync(msg.Text);
     if (!isMatch) await bot.SendMessage(msg.Chat, noLinkError);
-
-    await bot.SendMessage(msg.Chat, await GetQuestionAsync(questionId.Value));
+    
+    var question = await GetQuestionAsync(questionId.Value);
+    await bot.SendMessage(msg.Chat, $"```\n{question}\n```", ParseMode.MarkdownV2);
 }
 
 static async Task<(bool isMatch, int? questionId)> TryGetQuestionIdAsync(string messageText)

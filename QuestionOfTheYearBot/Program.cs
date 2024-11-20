@@ -1,15 +1,11 @@
 ﻿using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
+using QuestionOfTheYearBot;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
-const string packageApiBase = "https://gotquestions.online/api/pack/";
-const string questionApiBase = "https://gotquestions.online/api/question/";
-const string noLinkError = "В сообщении нет ссылки на вопрос.";
-const string noTextError = "Бот поддерживает только работу с текстом.";
-const string questionReceiveError = "Не удалось вопрос по этой ссылке.";
 HttpClient client = new();
 
 var configuration = new ConfigurationBuilder()
@@ -29,16 +25,16 @@ return;
 
 async Task<string> GetQuestionAsync(int questionId)
 {
-    var questionApiUrl = $"{questionApiBase}{questionId}/";
+    var questionApiUrl = $"{ServiceLines.questionApiBase}{questionId}/";
     var questionResponse = await client.GetAsync(questionApiUrl);
 
-    if (!questionResponse.IsSuccessStatusCode) return "Failed to receive data";
+    if (!questionResponse.IsSuccessStatusCode) return ServiceLines.questionReceiveError;
 
     var questionJson = await questionResponse.Content.ReadAsStringAsync();
     var question = JsonSerializer.Deserialize<Question>(questionJson);
     question.QuestionId = questionApiUrl.Split('/')[^2];
 
-    var packageResponse = await client.GetAsync($"{packageApiBase}{question.PackageId}/");
+    var packageResponse = await client.GetAsync($"{ServiceLines.packageApiBase}{question.PackageId}/");
     var packageJson = await packageResponse.Content.ReadAsStringAsync();
     var package = JsonSerializer.Deserialize<Tournament>(packageJson);
     if (package is { Id: not null }) question.TournamentId = package.Id.Value;
@@ -50,21 +46,21 @@ async Task OnMessage(Message msg, UpdateType type)
 {
     if (msg.Text is null)
     {
-        await bot.SendMessage(msg.Chat, noTextError);
+        await bot.SendMessage(msg.Chat, ServiceLines.noTextError);
         return;
     }
 
     var (isMatch, questionId) = TryGetQuestionIdAsync(msg.Text);
     if (!isMatch)
     {
-        await bot.SendMessage(msg.Chat, noLinkError);
+        await bot.SendMessage(msg.Chat, ServiceLines.noLinkError);
         return;
     }
 
     var question = await GetQuestionAsync(questionId.Value);
     if (string.IsNullOrEmpty(question))
     {
-        await bot.SendMessage(msg.Chat, questionReceiveError);
+        await bot.SendMessage(msg.Chat, ServiceLines.questionReceiveError);
         return;
     }
 

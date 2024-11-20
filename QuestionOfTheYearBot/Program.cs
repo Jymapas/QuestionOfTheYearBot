@@ -10,7 +10,7 @@ using Telegram.Bot.Types.Enums;
 const string packageApiBase = "https://gotquestions.online/api/pack/";
 const string questionApiBase = "https://gotquestions.online/api/question/";
 const string noLinkError = "В сообщении нет ссылки на вопрос.";
-const string noTextError = "Бот поддеживает только работу с текстом.";
+const string noTextError = "Бот поддерживает только работу с текстом.";
 const string questionReceiveError = "Не удалось вопрос по этой ссылке.";
 HttpClient client = new();
 

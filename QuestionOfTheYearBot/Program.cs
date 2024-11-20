@@ -12,6 +12,20 @@ const string questionApiBase = "https://gotquestions.online/api/question/";
 const string noLinkError = "В сообщении нет ссылки на вопрос.";
 const string noTextError = "Бот поддеживает только работу с текстом.";
 
+var configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", false, true)
+    .Build();
+
+var botToken = configuration["Authentication:Token"];
+
+if (string.IsNullOrEmpty(botToken)) throw new InvalidOperationException("Token is not configured.");
+
+using var cts = new CancellationTokenSource();
+var bot = new TelegramBotClient(botToken, cancellationToken: cts.Token);
+bot.OnMessage += OnMessage;
+
+Console.ReadLine();
+
 async Task<string> GetQuestionAsync(int questionId)
 {
     var client = new HttpClient();
@@ -31,20 +45,6 @@ async Task<string> GetQuestionAsync(int questionId)
 
     return question.ToString();
 }
-
-var configuration = new ConfigurationBuilder()
-    .AddJsonFile("appsettings.json", false, true)
-    .Build();
-
-var botToken = configuration["Authentication:Token"];
-
-if (string.IsNullOrEmpty(botToken)) throw new InvalidOperationException("Token is not configured.");
-
-using var cts = new CancellationTokenSource();
-var bot = new TelegramBotClient(botToken, cancellationToken: cts.Token);
-bot.OnMessage += OnMessage;
-
-Console.ReadLine();
 
 async Task OnMessage(Message msg, UpdateType type)
 {

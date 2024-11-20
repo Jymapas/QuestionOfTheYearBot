@@ -11,6 +11,7 @@ const string packageApiBase = "https://gotquestions.online/api/pack/";
 const string questionApiBase = "https://gotquestions.online/api/question/";
 const string noLinkError = "В сообщении нет ссылки на вопрос.";
 const string noTextError = "Бот поддеживает только работу с текстом.";
+HttpClient client = new();
 
 var configuration = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", false, true)
@@ -28,7 +29,6 @@ Console.ReadLine();
 
 async Task<string> GetQuestionAsync(int questionId)
 {
-    var client = new HttpClient();
     var questionApiUrl = $"{questionApiBase}{questionId}/";
     var questionResponse = await client.GetAsync(questionApiUrl);
 
@@ -38,7 +38,7 @@ async Task<string> GetQuestionAsync(int questionId)
     var question = JsonSerializer.Deserialize<Question>(questionJson);
     question.QuestionId = questionApiUrl.Split('/')[^2];
 
-    var packageResponse = await client.GetAsync($@"{packageApiBase}{question.PackageId}/");
+    var packageResponse = await client.GetAsync($"{packageApiBase}{question.PackageId}/");
     var packageJson = await packageResponse.Content.ReadAsStringAsync();
     var package = JsonSerializer.Deserialize<Tournament>(packageJson);
     if (package is { Id: not null }) question.TournamentId = package.Id.Value;

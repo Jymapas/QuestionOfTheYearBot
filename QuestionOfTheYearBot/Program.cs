@@ -94,7 +94,7 @@ internal class Question
         if (TournamentId != 0) sb.Append($"Ссылка на турнир: https://rating.chgk.info/tournament/{TournamentId}\n");
         sb.Append($"Ссылка на вопрос: https://gotquestions.online/question/{QuestionId}\n");
         sb.Append($"Вопрос {Number}\n");
-        if (HandoutPic != null || HandoutText != null)
+        if (!string.IsNullOrEmpty(HandoutText) || !string.IsNullOrEmpty(HandoutPic))
         {
             sb.Append("[Раздаточный материал:");
             if (HandoutPic != null) sb.Append($"{HandoutPic}\n");

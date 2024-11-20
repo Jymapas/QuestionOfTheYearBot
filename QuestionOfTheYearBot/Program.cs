@@ -48,11 +48,19 @@ async Task<string> GetQuestionAsync(int questionId)
 
 async Task OnMessage(Message msg, UpdateType type)
 {
-    if (msg.Text is null) await bot.SendMessage(msg.Chat, noTextError);
+    if (msg.Text is null)
+    {
+        await bot.SendMessage(msg.Chat, noTextError);
+        return;
+    }
 
     var (isMatch, questionId) = await TryGetQuestionIdAsync(msg.Text);
-    if (!isMatch) await bot.SendMessage(msg.Chat, noLinkError);
-    
+    if (!isMatch)
+    {
+        await bot.SendMessage(msg.Chat, noLinkError);
+        return;
+    }
+
     var question = await GetQuestionAsync(questionId.Value);
     await bot.SendMessage(msg.Chat, $"```\n{question}\n```", ParseMode.MarkdownV2);
 }

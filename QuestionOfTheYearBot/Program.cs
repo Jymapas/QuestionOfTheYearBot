@@ -54,7 +54,7 @@ async Task OnMessage(Message msg, UpdateType type)
         return;
     }
 
-    var (isMatch, questionId) = await TryGetQuestionIdAsync(msg.Text);
+    var (isMatch, questionId) = TryGetQuestionIdAsync(msg.Text);
     if (!isMatch)
     {
         await bot.SendMessage(msg.Chat, noLinkError);
@@ -65,7 +65,7 @@ async Task OnMessage(Message msg, UpdateType type)
     await bot.SendMessage(msg.Chat, $"```\n{question}\n```", ParseMode.MarkdownV2);
 }
 
-static async Task<(bool isMatch, int? questionId)> TryGetQuestionIdAsync(string messageText)
+static (bool isMatch, int? questionId) TryGetQuestionIdAsync(string messageText)
 {
     var pattern = @"https:\/\/gotquestions\.online\/question\/(\d+)";
 

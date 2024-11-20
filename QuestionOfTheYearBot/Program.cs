@@ -27,6 +27,7 @@ var bot = new TelegramBotClient(botToken, cancellationToken: cts.Token);
 bot.OnMessage += OnMessage;
 
 Console.ReadLine();
+return;
 
 async Task<string> GetQuestionAsync(int questionId)
 {

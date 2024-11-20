@@ -1,15 +1,39 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
+using Microsoft.Extensions.Configuration;
+using Telegram.Bot;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 const string packageApiBase = "https://gotquestions.online/api/pack/";
+const string questionApiBase = "https://gotquestions.online/api/question/";
+const string noLinkError = "В сообщении нет ссылки на вопрос.";
+const string noTextError = "Бот поддеживает только работу с текстом.";
 
-var questionApiUrl = "https://gotquestions.online/api/question/395284/";
-var client = new HttpClient();
-var questionResponse = await client.GetAsync(questionApiUrl);
+var configuration = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", false, true)
+    .Build();
 
-if (questionResponse.IsSuccessStatusCode)
+var botToken = configuration["Authentication:Token"];
+
+if (string.IsNullOrEmpty(botToken)) throw new InvalidOperationException("Token is not configured.");
+
+using var cts = new CancellationTokenSource();
+var bot = new TelegramBotClient(botToken, cancellationToken: cts.Token);
+bot.OnMessage += OnMessage;
+
+Console.ReadLine();
+
+async Task<string> GetQuestionAsync(int questionId)
 {
+    var client = new HttpClient();
+    var questionApiUrl = $"{questionApiBase}{questionId}/";
+    var questionResponse = await client.GetAsync(questionApiUrl);
+
+    if (!questionResponse.IsSuccessStatusCode) return "Failed to receive data";
+
     var questionJson = await questionResponse.Content.ReadAsStringAsync();
     var question = JsonSerializer.Deserialize<Question>(questionJson);
     question.QuestionId = questionApiUrl.Split('/')[^2];
@@ -19,11 +43,30 @@ if (questionResponse.IsSuccessStatusCode)
     var package = JsonSerializer.Deserialize<Tournament>(packageJson);
     if (package is { Id: not null }) question.TournamentId = package.Id.Value;
 
-    Console.WriteLine(question);
+    return question.ToString();
 }
-else
+
+async Task OnMessage(Message msg, UpdateType type)
 {
-    Console.WriteLine("Failed to receive data");
+    if (msg.Text is null) await bot.SendMessage(msg.Chat, noTextError);
+
+    var (isMatch, questionId) = await TryGetQuestionIdAsync(msg.Text);
+    if (!isMatch) await bot.SendMessage(msg.Chat, noLinkError);
+    
+    var question = await GetQuestionAsync(questionId.Value);
+    await bot.SendMessage(msg.Chat, $"```\n{question}\n```", ParseMode.MarkdownV2);
+}
+
+static async Task<(bool isMatch, int? questionId)> TryGetQuestionIdAsync(string messageText)
+{
+    var pattern = @"https:\/\/gotquestions\.online\/question\/(\d+)";
+
+    var match = Regex.Match(messageText, pattern);
+    if (!match.Success) return (false, null);
+
+    var numberString = match.Groups[1].Value;
+    var number = int.Parse(numberString);
+    return (true, number);
 }
 
 internal class Question
@@ -51,7 +94,7 @@ internal class Question
         if (TournamentId != 0) sb.Append($"Ссылка на турнир: https://rating.chgk.info/tournament/{TournamentId}\n");
         sb.Append($"Ссылка на вопрос: https://gotquestions.online/question/{QuestionId}\n");
         sb.Append($"Вопрос {Number}\n");
-        if (HandoutPic != null || HandoutText != null)
+        if (!string.IsNullOrEmpty(HandoutText) || !string.IsNullOrEmpty(HandoutPic))
         {
             sb.Append("[Раздаточный материал:");
             if (HandoutPic != null) sb.Append($"{HandoutPic}\n");

@@ -11,6 +11,7 @@ const string packageApiBase = "https://gotquestions.online/api/pack/";
 const string questionApiBase = "https://gotquestions.online/api/question/";
 const string noLinkError = "В сообщении нет ссылки на вопрос.";
 const string noTextError = "Бот поддеживает только работу с текстом.";
+const string questionReceiveError = "Не удалось вопрос по этой ссылке.";
 HttpClient client = new();
 
 var configuration = new ConfigurationBuilder()
@@ -62,6 +63,12 @@ async Task OnMessage(Message msg, UpdateType type)
     }
 
     var question = await GetQuestionAsync(questionId.Value);
+    if (string.IsNullOrEmpty(question))
+    {
+        await bot.SendMessage(msg.Chat, questionReceiveError);
+        return;
+    }
+
     await bot.SendMessage(msg.Chat, $"```\n{question}\n```", ParseMode.MarkdownV2);
 }
 

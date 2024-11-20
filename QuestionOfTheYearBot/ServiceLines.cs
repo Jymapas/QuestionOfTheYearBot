@@ -7,4 +7,5 @@ public abstract record ServiceLines
     public const string noLinkError = "В сообщении нет ссылки на вопрос.";
     public const string noTextError = "Бот поддерживает только работу с текстом.";
     public const string questionReceiveError = "Не удалось вопрос по этой ссылке.";
+    public const string pattern = @"https:\/\/gotquestions\.online\/question\/(\d+)";
 }

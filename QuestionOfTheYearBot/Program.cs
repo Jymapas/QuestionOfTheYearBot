@@ -69,9 +69,7 @@ async Task OnMessage(Message msg, UpdateType type)
 
 static (bool isMatch, int? questionId) TryGetQuestionIdAsync(string messageText)
 {
-    var pattern = @"https:\/\/gotquestions\.online\/question\/(\d+)";
-
-    var match = Regex.Match(messageText, pattern);
+    var match = Regex.Match(messageText, ServiceLines.pattern);
     if (!match.Success) return (false, null);
 
     var numberString = match.Groups[1].Value;

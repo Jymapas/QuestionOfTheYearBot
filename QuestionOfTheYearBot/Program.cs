@@ -38,7 +38,7 @@ async Task<string> GetQuestionAsync(int questionId)
     var question = JsonSerializer.Deserialize<Question>(questionJson);
     question.QuestionId = questionApiUrl.Split('/')[^2];
 
-    var packageResponse = await client.GetAsync($@"{packageApiBase}{question.packageId}/");
+    var packageResponse = await client.GetAsync($@"{packageApiBase}{question.PackageId}/");
     var packageJson = await packageResponse.Content.ReadAsStringAsync();
     var package = JsonSerializer.Deserialize<Tournament>(packageJson);
     if (package is { Id: not null }) question.TournamentId = package.Id.Value;
@@ -72,7 +72,7 @@ static async Task<(bool isMatch, int? questionId)> TryGetQuestionIdAsync(string 
 internal class Question
 {
     [JsonPropertyName("packTitle")] public string TournamentName { get; init; }
-    [JsonPropertyName("packId")] public int packageId { get; init; }
+    [JsonPropertyName("packId")] public int PackageId { get; init; }
     public int TournamentId { get; set; }
     public string QuestionId { get; set; }
     [JsonPropertyName("number")] public int Number { get; init; }
